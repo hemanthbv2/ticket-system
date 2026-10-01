@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import {
   LayoutDashboardIcon,
@@ -35,13 +35,12 @@ export default function DashboardPage() {
   const user = session?.user as any;
 
   useEffect(() => {
-    if (!session || user?.role === "requester") {
-      setLoading(false);
-      return;
-    }
+    if (!session || user?.role === "requester") return;
     fetch("/api/tickets")
       .then((r) => r.json())
-      .then(setTickets)
+      .then((data) => {
+        if (Array.isArray(data)) setTickets(data);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [session, user]);
@@ -89,12 +88,14 @@ export default function DashboardPage() {
   const avgHours = Math.round(avgResolution / (1000 * 60 * 60));
 
   // Overdue (created more than 3 days ago and still open)
-  const threeDaysAgo = Date.now() - 3 * 24 * 60 * 60 * 1000;
-  const overdue = tickets.filter(
-    (t) =>
-      !["Closed", "Cancelled", "Resolved"].includes(t.status) &&
-      new Date(t.createdAt).getTime() < threeDaysAgo
-  ).length;
+  const overdue = useMemo(() => {
+    const threeDaysAgo = Date.now() - 3 * 24 * 60 * 60 * 1000;
+    return tickets.filter(
+      (t) =>
+        !["Closed", "Cancelled", "Resolved"].includes(t.status) &&
+        new Date(t.createdAt).getTime() < threeDaysAgo
+    ).length;
+  }, [tickets]);
 
   // Export CSV
   const exportCSV = () => {

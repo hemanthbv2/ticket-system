@@ -2,13 +2,11 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   SettingsIcon,
   UsersIcon,
   TagIcon,
-  PlusCircleIcon,
-  EditIcon,
-  TrashIcon,
   ShieldIcon,
   SearchIcon,
 } from "lucide-react";
@@ -35,7 +33,6 @@ export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
 
   const user = session?.user as any;
 
@@ -43,12 +40,10 @@ export default function AdminPage() {
     Promise.all([
       fetch("/api/dev/users").then((r) => r.json()),
       fetch("/api/categories").then((r) => r.json()),
-    ])
-      .then(([u, c]) => {
-        setUsers(u);
-        setCategories(c);
-      })
-      .finally(() => setLoading(false));
+    ]).then(([u, c]) => {
+      setUsers(u);
+      setCategories(c);
+    });
   }, []);
 
   const roleColors: Record<string, string> = {
@@ -75,9 +70,9 @@ export default function AdminPage() {
         <p className="text-sm text-slate-400 mb-6">
           Only administrators can access the Admin Panel.
         </p>
-        <a href="/tickets" className="btn-primary text-xs py-2 px-4 inline-block">
+        <Link href="/tickets" className="btn-primary text-xs py-2 px-4 inline-block">
           Return to My Tickets
-        </a>
+        </Link>
       </div>
     );
   }
