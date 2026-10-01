@@ -19,31 +19,27 @@ export const authOptions: NextAuthOptions = {
         ]
       : []),
 
-    // ── Dev Login (development, or when Google OAuth not set / ENABLE_DEV_LOGIN=true) ────
-    ...(process.env.NODE_ENV === "development" || !process.env.GOOGLE_CLIENT_ID || process.env.ENABLE_DEV_LOGIN === "true"
-      ? [
-          CredentialsProvider({
-            id: "dev-login",
-            name: "Dev Login",
-            credentials: {
-              email: { label: "Email", type: "text" },
-            },
-            async authorize(credentials) {
-              if (!credentials?.email) return null;
-              const user = await prisma.user.findUnique({
-                where: { email: credentials.email },
-              });
-              if (!user) return null;
-              return {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                image: user.avatarUrl,
-              };
-            },
-          }),
-        ]
-      : []),
+    // ── Quick Role Switcher / Dev Login ───────────────────
+    CredentialsProvider({
+      id: "dev-login",
+      name: "Quick Switcher",
+      credentials: {
+        email: { label: "Email", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email) return null;
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        });
+        if (!user) return null;
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.avatarUrl,
+        };
+      },
+    }),
   ],
 
   callbacks: {
