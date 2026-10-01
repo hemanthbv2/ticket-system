@@ -67,8 +67,12 @@ export async function POST(
     },
   });
 
-  // Track first response time
-  if ((user.role === "agent" || user.role === "admin") && !ticket.firstResponseAt) {
+  // Track first response time (agents, admins, or media head responding to requester)
+  if (
+    (user.role === "agent" || user.role === "admin" || user.role === "media_head") &&
+    !ticket.firstResponseAt &&
+    user.id !== ticket.requesterId
+  ) {
     await prisma.ticket.update({
       where: { id },
       data: { firstResponseAt: new Date() },

@@ -12,13 +12,20 @@ export interface StorageProvider {
   delete(filePath: string): Promise<void>;
 }
 
-const UPLOAD_DIR = process.env.UPLOAD_DIR || "./uploads";
+const UPLOAD_DIR =
+  process.env.UPLOAD_DIR ||
+  (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME
+    ? path.join("/tmp", "uploads")
+    : path.join(process.cwd(), "uploads"));
 
 class LocalStorageProvider implements StorageProvider {
   constructor() {
-    // Ensure upload directory exists
-    if (!fs.existsSync(UPLOAD_DIR)) {
-      fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+    try {
+      if (!fs.existsSync(UPLOAD_DIR)) {
+        fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+      }
+    } catch {
+      // Safe fallback for serverless read-only contexts
     }
   }
 

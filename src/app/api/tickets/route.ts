@@ -24,7 +24,11 @@ export async function GET(req: NextRequest) {
   if (user.role === "requester") {
     where.requesterId = user.id;
   } else if (user.role === "media_head") {
-    where.departmentSnapshot = user.department;
+    where.OR = [
+      { departmentSnapshot: user.department || "Media Cell" },
+      { managerEmailSnapshot: user.email },
+      { requesterId: user.id },
+    ];
   } else if (user.role === "agent") {
     // Get agent's categories
     const agentCats = await prisma.agentCategory.findMany({

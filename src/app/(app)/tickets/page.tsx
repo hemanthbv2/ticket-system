@@ -28,6 +28,10 @@ type Ticket = {
   designationSnapshot: string;
   category?: { id: string; name: string } | null;
   assignee?: { id: string; name: string } | null;
+  isEscalated?: boolean;
+  escalationLevel?: number;
+  requiresApproval?: boolean;
+  approvalStatus?: string | null;
   attachments: any[];
   _count: { comments: number };
 };
@@ -207,6 +211,21 @@ export default function TicketsPage() {
                     <span className={`badge ${statusColors[ticket.status]}`}>
                       {ticket.status}
                     </span>
+                    {ticket.isEscalated && (
+                      <span className="badge bg-red-500/20 text-red-400 border border-red-500/40 text-[10px] font-semibold">
+                        ⚡ Tier {ticket.escalationLevel || 2} Escalated
+                      </span>
+                    )}
+                    {ticket.requiresApproval && ticket.approvalStatus === "Pending" && (
+                      <span className="badge bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px]">
+                        ⏳ Needs Approval
+                      </span>
+                    )}
+                    {ticket.requiresApproval && ticket.approvalStatus === "Approved" && (
+                      <span className="badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px]">
+                        ✓ Approved
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm font-medium text-slate-200 mt-1 truncate">{ticket.description}</p>
                   <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500">

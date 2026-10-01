@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
-const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || "./uploads");
+const UPLOAD_DIR = path.resolve(
+  process.env.UPLOAD_DIR ||
+    (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME
+      ? path.join("/tmp", "uploads")
+      : path.join(process.cwd(), "uploads"))
+);
 
 export async function GET(
   req: NextRequest,

@@ -248,11 +248,22 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
   if (!ticket) {
     return (
-      <div className="text-center py-20">
-        <h2 className="text-xl font-bold text-slate-400">Ticket not found</h2>
-        <button onClick={() => router.back()} className="btn-secondary mt-4">
-          Go Back
-        </button>
+      <div className="glass-card p-12 text-center max-w-md mx-auto my-12 animate-fade-in-up">
+        <div className="w-12 h-12 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-4 border border-white/5">
+          <TagIcon className="w-6 h-6" />
+        </div>
+        <h2 className="text-xl font-bold text-white mb-2">Ticket Not Found</h2>
+        <p className="text-sm text-slate-400 mb-6">
+          This ticket may have been removed or the link is invalid.
+        </p>
+        <div className="flex items-center justify-center gap-2">
+          <button onClick={() => router.back()} className="btn-secondary text-xs py-2 px-4">
+            Go Back
+          </button>
+          <button onClick={() => router.push("/tickets")} className="btn-primary text-xs py-2 px-4">
+            View All Tickets
+          </button>
+        </div>
       </div>
     );
   }

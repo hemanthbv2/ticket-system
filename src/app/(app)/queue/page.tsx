@@ -27,6 +27,10 @@ type Ticket = {
   departmentSnapshot: string;
   category?: { id: string; name: string } | null;
   assignee?: { id: string; name: string } | null;
+  isEscalated?: boolean;
+  escalationLevel?: number;
+  requiresApproval?: boolean;
+  approvalStatus?: string | null;
   _count: { comments: number };
 };
 
@@ -223,6 +227,21 @@ export default function AgentQueuePage() {
                   <span className={`badge border ${priorityColors[ticket.priority]}`}>{ticket.priority}</span>
                   {ticket.category && (
                     <span className="badge bg-slate-700/50 text-slate-400 text-[10px]">{ticket.category.name}</span>
+                  )}
+                  {ticket.isEscalated && (
+                    <span className="badge bg-red-500/20 text-red-400 border border-red-500/40 text-[10px] font-semibold">
+                      ⚡ Tier {ticket.escalationLevel || 2} Escalated
+                    </span>
+                  )}
+                  {ticket.requiresApproval && ticket.approvalStatus === "Pending" && (
+                    <span className="badge bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px]">
+                      ⏳ Needs Approval
+                    </span>
+                  )}
+                  {ticket.requiresApproval && ticket.approvalStatus === "Approved" && (
+                    <span className="badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px]">
+                      ✓ Approved
+                    </span>
                   )}
                 </div>
                 <p className="text-sm font-medium text-slate-200 truncate">{ticket.description}</p>

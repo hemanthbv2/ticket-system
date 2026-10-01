@@ -34,6 +34,10 @@ model User {
 
   // Agent can belong to category groups
   agentCategories AgentCategory[]
+
+  @@index([managerId])
+  @@index([role])
+  @@index([department])
 }
 
 model Category {
@@ -99,13 +103,22 @@ model Ticket {
   approvalNotes       String?
 
   // Relations
-  requester    User          @relation("RequesterTickets", fields: [requesterId], references: [id])
-  assignee     User?         @relation("AssignedTickets", fields: [assigneeId], references: [id])
-  approvedBy   User?         @relation("ApprovedTickets", fields: [approvedById], references: [id])
-  category     Category?     @relation(fields: [categoryId], references: [id])
+  requester    User          @relation("RequesterTickets", fields: [requesterId], references: [id], onDelete: Restrict)
+  assignee     User?         @relation("AssignedTickets", fields: [assigneeId], references: [id], onDelete: SetNull)
+  approvedBy   User?         @relation("ApprovedTickets", fields: [approvedById], references: [id], onDelete: SetNull)
+  category     Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   comments     Comment[]
   attachments  Attachment[]
   auditLogs    AuditLog[]
+
+  @@index([requesterId])
+  @@index([assigneeId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([priority])
+  @@index([isEscalated])
+  @@index([requiresApproval, approvalStatus])
+  @@index([createdAt])
 }
 
 model Comment {
@@ -117,8 +130,11 @@ model Comment {
   createdAt  DateTime @default(now())
 
   ticket      Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  author      User         @relation(fields: [authorId], references: [id])
+  author      User         @relation(fields: [authorId], references: [id], onDelete: Restrict)
   attachments Attachment[]
+
+  @@index([ticketId])
+  @@index([authorId])
 }
 
 model Attachment {
@@ -134,7 +150,10 @@ model Attachment {
 
   ticket  Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   comment Comment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
-  uploader User    @relation(fields: [uploadedBy], references: [id])
+  uploader User    @relation(fields: [uploadedBy], references: [id], onDelete: Restrict)
+
+  @@index([ticketId])
+  @@index([commentId])
 }
 
 model AuditLog {
@@ -148,7 +167,10 @@ model AuditLog {
   createdAt  DateTime @default(now())
 
   ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  actor  User   @relation("ActorLogs", fields: [actorId], references: [id])
+  actor  User   @relation("ActorLogs", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([ticketId])
+  @@index([actorId])
 }
 
 model SlaConfig {
