@@ -19,8 +19,8 @@ export const authOptions: NextAuthOptions = {
         ]
       : []),
 
-    // ── Dev Login (development only) ─────────────────────
-    ...(process.env.NODE_ENV === "development"
+    // ── Dev Login (development, or when Google OAuth not set / ENABLE_DEV_LOGIN=true) ────
+    ...(process.env.NODE_ENV === "development" || !process.env.GOOGLE_CLIENT_ID || process.env.ENABLE_DEV_LOGIN === "true"
       ? [
           CredentialsProvider({
             id: "dev-login",
