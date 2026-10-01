@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String
+  designation String   @default("")
+  department  String   @default("Media Cell")
+  role        String   @default("requester") // requester | media_head | agent | admin
+  avatarUrl   String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  tickets       Ticket[]     @relation("RequesterTickets")
+  assignedTickets Ticket[]   @relation("AssignedTickets")
+  comments      Comment[]
+  attachments   Attachment[]
+  auditLogs     AuditLog[]   @relation("ActorLogs")
+
+  // Agent can belong to category groups
+  agentCategories AgentCategory[]
+}
+
+model Category {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  description   String   @default("")
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  tickets       Ticket[]
+  agentCategories AgentCategory[]
+}
+
+// Many-to-many: which agents handle which categories
+model AgentCategory {
+  id         String   @id @default(cuid())
+  userId     String
+  categoryId String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryId])
+}
+
+model Ticket {
+  id                  String    @id @default(cuid())
+  ticketNo            String    @unique // e.g. TKT-1042
+  requesterId         String
+  // Identity snapshots (immutable after creation)
+  nameSnapshot        String
+  designationSnapshot String
+  departmentSnapshot  String
+  emailSnapshot       String
+  // Ticket data
+  categoryId          String?
+  description         String
+  priority            String    @default("Medium") // Low | Medium | High | Urgent
+  status              String    @default("New")    // New | Assigned | In Progress | Waiting on Requester | Resolved | Closed | Cancelled
+  assigneeId          String?
+  dueDate             DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  firstResponseAt     DateTime?
+  resolvedAt          DateTime?
+  closedAt            DateTime?
+
+  // Relations
+  requester    User          @relation("RequesterTickets", fields: [requesterId], references: [id])
+  assignee     User?         @relation("AssignedTickets", fields: [assigneeId], references: [id])
+  category     Category?     @relation(fields: [categoryId], references: [id])
+  comments     Comment[]
+  attachments  Attachment[]
+  auditLogs    AuditLog[]
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  ticketId   String
+  authorId   String
+  body       String
+  isInternal Boolean  @default(false) // Internal notes (agents only)
+  createdAt  DateTime @default(now())
+
+  ticket      Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author      User         @relation(fields: [authorId], references: [id])
+  attachments Attachment[]
+}
+
+model Attachment {
+  id         String   @id @default(cuid())
+  ticketId   String
+  commentId  String?
+  fileUrl    String
+  fileName   String   @default("")
+  mime       String
+  size       Int      // bytes
+  uploadedBy String
+  createdAt  DateTime @default(now())
+
+  ticket  Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  comment Comment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
+  uploader User    @relation(fields: [uploadedBy], references: [id])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  ticketId   String
+  action     String   // e.g. "status_change", "assigned", "comment_added", "created"
+  fromStatus String?
+  toStatus   String?
+  details    String?  // JSON string for extra info
+  actorId    String
+  createdAt  DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  actor  User   @relation("ActorLogs", fields: [actorId], references: [id])
+}
+
+model SlaConfig {
+  id                  String @id @default(cuid())
+  priority            String @unique // Low | Medium | High | Urgent
+  firstResponseMinutes Int
+  resolutionMinutes    Int
+}
+
+model TicketCounter {
+  id    String @id @default("singleton")
+  count Int    @default(1000)
+}
