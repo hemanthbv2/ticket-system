@@ -181,9 +181,9 @@ export default function NewTicketPage() {
           />
         </div>
 
-        {/* Auto-filled identity (read-only) */}
+        {/* Auto-filled identity & Hierarchy (read-only) */}
         <div className="glass-card p-5">
-          <h2 className="text-sm font-semibold text-slate-300 mb-3">Your Details (auto-filled)</h2>
+          <h2 className="text-sm font-semibold text-slate-300 mb-3">Your Details & Hierarchy (auto-filled)</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex items-center gap-2 text-sm text-slate-400">
               <UserIcon className="w-4 h-4 text-slate-600" />
@@ -195,14 +195,42 @@ export default function NewTicketPage() {
             </div>
             <div className="flex items-center gap-2 text-sm text-slate-400">
               <BuildingIcon className="w-4 h-4 text-slate-600" />
-              <span>{user?.department}</span>
+              <span>{user?.department || "Media Cell"}</span>
             </div>
             <div className="flex items-center gap-2 text-sm text-slate-400">
               <UserIcon className="w-4 h-4 text-slate-600" />
-              <span>{user?.designation}</span>
+              <span>{user?.designation || "Media Cell Member"}</span>
             </div>
           </div>
+
+          {/* Reporting Line */}
+          <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-xs">
+            <span className="text-slate-500">Reporting Manager:</span>
+            <span className="text-indigo-400 font-medium">
+              {user?.managerName || "Arjun Mehta"} ({user?.managerDesignation || "Head of Media Cell"})
+            </span>
+          </div>
         </div>
+
+        {/* Hierarchy Approval Notice */}
+        {(() => {
+          const selectedCatName = categories.find((c) => c.id === categoryId)?.name;
+          const isHighImpact = ["Procurement", "Finance", "Legal"].includes(selectedCatName || "") || priority === "Urgent";
+          if (!isHighImpact) return null;
+          return (
+            <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs text-purple-300 flex items-start gap-2.5">
+              <div className="w-5 h-5 rounded-md bg-purple-500/20 flex items-center justify-center flex-shrink-0 text-purple-400 mt-0.5">
+                🏛️
+              </div>
+              <div>
+                <p className="font-semibold text-purple-200">Tier 2 Manager Approval Required</p>
+                <p className="text-purple-300/80 mt-0.5">
+                  Tickets in <strong>{selectedCatName || priority}</strong> priority/category are routed through <strong>{user?.managerName || "Arjun Mehta (Head of Media Cell)"}</strong> for budget and operational sign-off.
+                </p>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Error */}
         {error && (

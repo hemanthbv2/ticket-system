@@ -52,6 +52,7 @@ export async function GET(req: NextRequest) {
       category: true,
       assignee: { select: { id: true, name: true, email: true } },
       requester: { select: { id: true, name: true, email: true } },
+      approvedBy: { select: { id: true, name: true } },
       attachments: { where: { commentId: null }, take: 1 },
       _count: { select: { comments: true } },
     },
@@ -77,10 +78,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Description is required" }, { status: 400 });
   }
 
-  // Get user details for snapshot
-  const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+  // Get user details and manager for snapshot
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    include: { manager: true },
+  });
   if (!dbUser) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  // Check if category or priority triggers manager approval tier
+  let requiresApproval = false;
+  if (categoryId) {
+    const category = await prisma.category.findUnique({ where: { id: categoryId } });
+    if (category && ["Procurement", "Finance", "Legal"].includes(category.name)) {
+      requiresApproval = true;
+    }
+  }
+  if (priority === "Urgent") {
+    requiresApproval = true;
   }
 
   // Generate ticket number
@@ -91,7 +107,7 @@ export async function POST(req: NextRequest) {
 
   const ticketNo = `TKT-${counter.count}`;
 
-  // Create ticket with snapshot
+  // Create ticket with reporting hierarchy snapshot
   const ticket = await prisma.ticket.create({
     data: {
       ticketNo,
@@ -100,10 +116,15 @@ export async function POST(req: NextRequest) {
       designationSnapshot: dbUser.designation,
       departmentSnapshot: dbUser.department,
       emailSnapshot: dbUser.email,
+      managerNameSnapshot: dbUser.manager?.name || (dbUser.department === "Media Cell" ? "Arjun Mehta" : null),
+      managerEmailSnapshot: dbUser.manager?.email || (dbUser.department === "Media Cell" ? "mediahead@mediacell.org" : null),
       description: description.trim(),
       categoryId: categoryId || null,
       priority: priority || "Medium",
       dueDate: dueDate ? new Date(dueDate) : null,
+      requiresApproval,
+      approvalStatus: requiresApproval ? "Pending" : null,
+      escalationLevel: 1,
     },
   });
 

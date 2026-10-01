@@ -18,6 +18,11 @@ type User = {
   role: string;
   designation: string;
   department: string;
+  manager?: {
+    id: string;
+    name: string;
+    designation: string;
+  } | null;
 };
 
 type Category = {
@@ -133,6 +138,7 @@ export default function AdminPage() {
                     <th className="text-left py-3 px-4 text-xs text-slate-500 font-medium hidden sm:table-cell">Email</th>
                     <th className="text-left py-3 px-4 text-xs text-slate-500 font-medium hidden md:table-cell">Designation</th>
                     <th className="text-left py-3 px-4 text-xs text-slate-500 font-medium">Role</th>
+                    <th className="text-left py-3 px-4 text-xs text-slate-500 font-medium hidden lg:table-cell">Reports To (Hierarchy)</th>
                     <th className="text-left py-3 px-4 text-xs text-slate-500 font-medium hidden md:table-cell">Department</th>
                   </tr>
                 </thead>
@@ -153,6 +159,16 @@ export default function AdminPage() {
                         <span className={`badge ${roleColors[u.role]}`}>
                           {u.role.replace("_", " ")}
                         </span>
+                      </td>
+                      <td className="py-3 px-4 hidden lg:table-cell">
+                        {u.manager ? (
+                          <div className="text-xs">
+                            <span className="text-indigo-400 font-medium">{u.manager.name}</span>
+                            <span className="text-slate-500 block text-[10px]">{u.manager.designation}</span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-600 text-xs italic">Top Tier / Executive</span>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-slate-500 hidden md:table-cell">{u.department}</td>
                     </tr>

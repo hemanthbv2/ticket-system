@@ -19,12 +19,18 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // Organizational Hierarchy (Reporting line)
+  managerId     String?
+  manager       User?    @relation("ReportingHierarchy", fields: [managerId], references: [id], onDelete: SetNull)
+  directReports User[]   @relation("ReportingHierarchy")
+
   // Relations
-  tickets       Ticket[]     @relation("RequesterTickets")
-  assignedTickets Ticket[]   @relation("AssignedTickets")
-  comments      Comment[]
-  attachments   Attachment[]
-  auditLogs     AuditLog[]   @relation("ActorLogs")
+  tickets         Ticket[]     @relation("RequesterTickets")
+  assignedTickets Ticket[]     @relation("AssignedTickets")
+  approvedTickets Ticket[]     @relation("ApprovedTickets")
+  comments        Comment[]
+  attachments     Attachment[]
+  auditLogs       AuditLog[]   @relation("ActorLogs")
 
   // Agent can belong to category groups
   agentCategories AgentCategory[]
@@ -61,6 +67,11 @@ model Ticket {
   designationSnapshot String
   departmentSnapshot  String
   emailSnapshot       String
+
+  // Reporting Hierarchy Snapshot
+  managerNameSnapshot  String?
+  managerEmailSnapshot String?
+
   // Ticket data
   categoryId          String?
   description         String
@@ -74,9 +85,23 @@ model Ticket {
   resolvedAt          DateTime?
   closedAt            DateTime?
 
+  // Escalation Hierarchy
+  isEscalated         Boolean   @default(false)
+  escalatedAt         DateTime?
+  escalationReason    String?
+  escalationLevel     Int       @default(1) // Level 1 (Agent), Level 2 (Media Head), Level 3 (Admin)
+
+  // Approval Tier (e.g. Procurement, Finance, High-impact)
+  requiresApproval    Boolean   @default(false)
+  approvalStatus      String?   // Pending | Approved | Rejected
+  approvedById        String?
+  approvedAt          DateTime?
+  approvalNotes       String?
+
   // Relations
   requester    User          @relation("RequesterTickets", fields: [requesterId], references: [id])
   assignee     User?         @relation("AssignedTickets", fields: [assigneeId], references: [id])
+  approvedBy   User?         @relation("ApprovedTickets", fields: [approvedById], references: [id])
   category     Category?     @relation(fields: [categoryId], references: [id])
   comments     Comment[]
   attachments  Attachment[]

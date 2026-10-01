@@ -11,6 +11,13 @@ export async function GET() {
       role: true,
       designation: true,
       department: true,
+      manager: {
+        select: {
+          id: true,
+          name: true,
+          designation: true,
+        },
+      },
     },
     orderBy: [{ role: "asc" }, { name: "asc" }],
   });

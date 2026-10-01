@@ -66,12 +66,16 @@ export const authOptions: NextAuthOptions = {
       if (user?.email) {
         const dbUser = await prisma.user.findUnique({
           where: { email: user.email },
+          include: { manager: true },
         });
         if (dbUser) {
           token.userId = dbUser.id;
           token.role = dbUser.role;
           token.designation = dbUser.designation;
           token.department = dbUser.department;
+          token.managerName = dbUser.manager?.name || null;
+          token.managerEmail = dbUser.manager?.email || null;
+          token.managerDesignation = dbUser.manager?.designation || null;
         }
       }
       return token;
@@ -83,6 +87,9 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).role = token.role as string;
         (session.user as any).designation = token.designation as string;
         (session.user as any).department = token.department as string;
+        (session.user as any).managerName = token.managerName as string | null;
+        (session.user as any).managerEmail = token.managerEmail as string | null;
+        (session.user as any).managerDesignation = token.managerDesignation as string | null;
       }
       return session;
     },

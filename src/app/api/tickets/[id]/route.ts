@@ -21,8 +21,20 @@ export async function GET(
     where: { id },
     include: {
       category: true,
-      requester: { select: { id: true, name: true, email: true, designation: true, department: true } },
+      requester: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          designation: true,
+          department: true,
+          manager: {
+            select: { id: true, name: true, email: true, designation: true },
+          },
+        },
+      },
       assignee: { select: { id: true, name: true, email: true, designation: true } },
+      approvedBy: { select: { id: true, name: true, email: true, designation: true } },
       attachments: true,
       comments: {
         include: {
@@ -78,6 +90,8 @@ export async function PATCH(
     "emailSnapshot",
     "designationSnapshot",
     "departmentSnapshot",
+    "managerNameSnapshot",
+    "managerEmailSnapshot",
     "ticketNo",
     "requesterId",
     "id",
@@ -103,10 +117,15 @@ export async function PATCH(
 
   // Strict requester role restrictions
   if (user.role === "requester") {
-    // Requesters cannot reassign, change category, or change priority
-    if (body.assigneeId !== undefined || body.categoryId !== undefined || body.priority !== undefined) {
+    // Requesters cannot reassign, change category, priority, or approval
+    if (
+      body.assigneeId !== undefined ||
+      body.categoryId !== undefined ||
+      body.priority !== undefined ||
+      body.approvalStatus !== undefined
+    ) {
       return NextResponse.json(
-        { error: "Forbidden: Requesters cannot change assignment, category, or priority" },
+        { error: "Forbidden: Requesters cannot modify assignment, category, priority, or approvals" },
         { status: 403 }
       );
     }
@@ -211,6 +230,53 @@ export async function PATCH(
       action: "priority_change",
       actorId: user.id,
       details: JSON.stringify({ from: ticket.priority, to: body.priority }),
+    });
+  }
+
+  // Escalation Hierarchy (Level 1 -> Level 2 -> Level 3)
+  if (body.escalate === true || body.escalationReason) {
+    const nextLevel = Math.min((ticket.escalationLevel || 1) + 1, 3);
+    updates.isEscalated = true;
+    updates.escalatedAt = new Date();
+    updates.escalationReason = body.escalationReason || "Escalated to senior management for priority intervention";
+    updates.escalationLevel = nextLevel;
+
+    auditEntries.push({
+      ticketId: id,
+      action: "ticket_escalated",
+      actorId: user.id,
+      details: JSON.stringify({
+        reason: updates.escalationReason,
+        level: nextLevel,
+        escalatedBy: user.name,
+      }),
+    });
+  }
+
+  // Manager Approval Tier (Media Head / Admin)
+  if (body.approvalStatus && ["Approved", "Rejected"].includes(body.approvalStatus)) {
+    if (user.role !== "media_head" && user.role !== "admin") {
+      return NextResponse.json(
+        { error: "Forbidden: Only reporting managers/Media Head can approve or reject tickets" },
+        { status: 403 }
+      );
+    }
+    updates.approvalStatus = body.approvalStatus;
+    updates.approvedById = user.id;
+    updates.approvedAt = new Date();
+    if (body.approvalNotes !== undefined) {
+      updates.approvalNotes = body.approvalNotes;
+    }
+
+    auditEntries.push({
+      ticketId: id,
+      action: body.approvalStatus === "Approved" ? "ticket_approved" : "ticket_rejected",
+      actorId: user.id,
+      details: JSON.stringify({
+        status: body.approvalStatus,
+        notes: body.approvalNotes || null,
+        approver: user.name,
+      }),
     });
   }
 

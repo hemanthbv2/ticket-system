@@ -13,6 +13,8 @@ import {
   BarChart3Icon,
   DownloadIcon,
   TrendingUpIcon,
+  ShieldCheckIcon,
+  ArrowUpRightIcon,
 } from "lucide-react";
 
 type Ticket = {
@@ -24,6 +26,11 @@ type Ticket = {
   createdAt: string;
   resolvedAt: string | null;
   nameSnapshot: string;
+  isEscalated?: boolean;
+  escalationLevel?: number;
+  escalationReason?: string | null;
+  requiresApproval?: boolean;
+  approvalStatus?: string | null;
   category?: { id: string; name: string } | null;
   assignee?: { id: string; name: string } | null;
 };
@@ -50,6 +57,16 @@ export default function DashboardPage() {
   const openTickets = tickets.filter((t) => !["Closed", "Cancelled"].includes(t.status)).length;
   const resolvedTickets = tickets.filter((t) => t.status === "Resolved" || t.status === "Closed").length;
   const urgentOpen = tickets.filter((t) => t.priority === "Urgent" && !["Closed", "Cancelled"].includes(t.status)).length;
+
+  // Hierarchy stats
+  const pendingApprovals = useMemo(
+    () => tickets.filter((t) => t.requiresApproval && t.approvalStatus === "Pending"),
+    [tickets]
+  );
+  const escalatedTickets = useMemo(
+    () => tickets.filter((t) => t.isEscalated && !["Closed", "Cancelled"].includes(t.status)),
+    [tickets]
+  );
 
   // By status
   const statusCounts = tickets.reduce((acc, t) => {
@@ -172,9 +189,11 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <LayoutDashboardIcon className="w-6 h-6 text-purple-400" />
-            Dashboard
+            Media Cell Hierarchy & Operations Dashboard
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">Media Cell ticket overview</p>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Supervisory monitoring, approvals, and escalation triage
+          </p>
         </div>
         <button onClick={exportCSV} className="btn-secondary flex items-center gap-2 w-fit">
           <DownloadIcon className="w-4 h-4" />
@@ -182,18 +201,20 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* KPI Cards (Including Hierarchy Tiers) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
           { icon: TicketIcon, label: "Total Tickets", value: totalTickets, color: "from-indigo-500 to-blue-500", iconColor: "text-indigo-400" },
-          { icon: AlertTriangleIcon, label: "Open", value: openTickets, color: "from-amber-500 to-orange-500", iconColor: "text-amber-400" },
+          { icon: AlertTriangleIcon, label: "Open Active", value: openTickets, color: "from-amber-500 to-orange-500", iconColor: "text-amber-400" },
+          { icon: ShieldCheckIcon, label: "Pending Sign-Off", value: pendingApprovals.length, color: "from-purple-500 to-pink-500", iconColor: "text-purple-400" },
+          { icon: AlertTriangleIcon, label: "Escalated", value: escalatedTickets.length, color: "from-red-500 to-rose-500", iconColor: "text-red-400" },
           { icon: CheckCircleIcon, label: "Resolved", value: resolvedTickets, color: "from-emerald-500 to-green-500", iconColor: "text-emerald-400" },
           { icon: ClockIcon, label: "Avg Resolution", value: avgHours > 0 ? `${avgHours}h` : "—", color: "from-cyan-500 to-teal-500", iconColor: "text-cyan-400" },
         ].map((kpi) => (
           <div key={kpi.label} className="glass-card p-4">
             <div className="flex items-center gap-2 mb-2">
               <kpi.icon className={`w-4 h-4 ${kpi.iconColor}`} />
-              <span className="text-xs text-slate-500">{kpi.label}</span>
+              <span className="text-[11px] text-slate-500 leading-tight">{kpi.label}</span>
             </div>
             <div className={`text-2xl font-bold bg-gradient-to-r ${kpi.color} bg-clip-text text-transparent`}>
               {kpi.value}
@@ -201,6 +222,85 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Active Hierarchy Triage (Pending Approvals & Escalations) */}
+      {(pendingApprovals.length > 0 || escalatedTickets.length > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Pending Approvals */}
+          {pendingApprovals.length > 0 && (
+            <div className="glass-card p-5 border border-purple-500/30">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <ShieldCheckIcon className="w-4 h-4 text-purple-400" />
+                  Requires Manager Sign-Off ({pendingApprovals.length})
+                </h3>
+                <span className="badge bg-purple-500/20 text-purple-300 text-[10px]">Tier 2 Approval</span>
+              </div>
+              <div className="space-y-2.5 max-h-56 overflow-y-auto">
+                {pendingApprovals.map((t) => (
+                  <Link
+                    key={t.id}
+                    href={`/tickets/${t.id}`}
+                    className="block p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-white/5"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-white">{t.ticketNo}</span>
+                      <span className="text-[10px] text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-md">
+                        {t.category?.name || "General"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300 truncate mt-1">{t.description}</p>
+                    <div className="flex items-center justify-between mt-2 text-[10px] text-slate-500">
+                      <span>By: {t.nameSnapshot}</span>
+                      <span className="text-purple-400 flex items-center gap-1 font-medium">
+                        Review <ArrowUpRightIcon className="w-3 h-3" />
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Escalated Tickets */}
+          {escalatedTickets.length > 0 && (
+            <div className="glass-card p-5 border border-red-500/30">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <AlertTriangleIcon className="w-4 h-4 text-red-400" />
+                  Escalated Incidents ({escalatedTickets.length})
+                </h3>
+                <span className="badge bg-red-500/20 text-red-300 text-[10px]">High SLA Priority</span>
+              </div>
+              <div className="space-y-2.5 max-h-56 overflow-y-auto">
+                {escalatedTickets.map((t) => (
+                  <Link
+                    key={t.id}
+                    href={`/tickets/${t.id}`}
+                    className="block p-3 rounded-xl bg-red-500/5 hover:bg-red-500/10 transition-colors border border-red-500/20"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-white">{t.ticketNo}</span>
+                      <span className="text-[10px] text-red-400 font-semibold bg-red-500/20 px-2 py-0.5 rounded-md">
+                        Tier {t.escalationLevel || 2} Escalation
+                      </span>
+                    </div>
+                    <p className="text-xs text-red-200/90 truncate mt-1">
+                      {t.escalationReason || t.description}
+                    </p>
+                    <div className="flex items-center justify-between mt-2 text-[10px] text-slate-400">
+                      <span>Requester: {t.nameSnapshot}</span>
+                      <span className="text-red-400 flex items-center gap-1 font-medium">
+                        Triage <ArrowUpRightIcon className="w-3 h-3" />
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Alerts */}
       {(urgentOpen > 0 || overdue > 0) && (
@@ -298,7 +398,7 @@ export default function DashboardPage() {
         <div className="glass-card p-5">
           <h3 className="text-sm font-semibold text-slate-400 mb-4 flex items-center gap-2">
             <UsersIcon className="w-4 h-4" />
-            Tickets per Member
+            Direct Reports Activity (Tickets per Member)
           </h3>
           <div className="space-y-2.5 max-h-52 overflow-y-auto">
             {Object.entries(memberCounts).sort(([, a], [, b]) => b - a).map(([name, count]) => (
